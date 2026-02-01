@@ -296,7 +296,7 @@ export function MarketList() {
   console.log('Filtered markets:', filteredMarkets);
 
   return (
-    <div className="max-w-[1400px] mx-auto px-3 md:px-10 py-6 md:py-12">
+    <div className="max-w-[1400px] mx-auto px-3 md:px-10 md:pr-16 py-6 md:py-12">
       {/* Stats Row */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-12 gap-8">
         {/* Total Deposits */}
@@ -408,15 +408,15 @@ export function MarketList() {
       {/* Markets Table */}
       <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed">
+          <table className="w-full">
             <colgroup>
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '11%' }} />
-              <col style={{ width: '11%' }} />
-              <col style={{ width: '11%' }} />
-              <col style={{ width: '23%' }} />
+              <col className="w-full" />
+              <col className="w-auto" />
+              <col className="w-auto" />
+              <col className="w-auto" />
+              <col className="w-auto" />
+              <col className="w-auto" />
+              <col className="w-auto" />
             </colgroup>
             <thead>
               <tr className="border-b border-white/5">

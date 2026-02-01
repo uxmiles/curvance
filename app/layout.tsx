@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
+import { DevToolbar } from '@/components/DevToolbar';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
           <div className="min-h-screen bg-[#0a0a0a]">
             {children}
           </div>
+          <DevToolbar />
         </ThemeProvider>
       </body>
     </html>
