@@ -7,12 +7,63 @@ import { Oracle1Icon, Oracle2Icon, Oracle3Icon } from './OracleIcons';
 import { HealthBarsIcon } from './HealthBarsIcon';
 import { Tooltip } from './Tooltip';
 import { DepositFilter } from './DepositFilter';
+import { HoverCard } from './HoverCard';
+import { 
+  MarketAssetsHover, 
+  DepositsBreakdownHover, 
+  LiquidityBreakdownHover, 
+  DepositAPYHover,
+  BorrowAPYHover,
+  OracleHover,
+} from './MarketHovers';
+
+interface AssetBreakdown {
+  symbol: string;
+  amount: string;
+  value: string;
+  percentage: number;
+}
+
+interface LiquidityAsset {
+  symbol: string;
+  available: string;
+  total: string;
+  utilizationRate: number;
+}
+
+// APY for each depositable asset in the market
+interface AssetAPY {
+  symbol: string;
+  baseAPY: string;
+  rewardAPY?: string;
+  rewardToken?: string;
+  totalAPY: string;
+}
+
+// Borrow direction: deposit A → borrow B
+interface BorrowDirection {
+  collateral: string;
+  borrow: string;
+  borrowAPY: string;
+  baseAPY: string;
+  rewardAPY?: string;
+  rewardToken?: string;
+}
+
+interface MarketAsset {
+  symbol: string;
+  name: string;
+  type: 'collateral' | 'borrow';
+  value?: string;
+}
 
 interface Market {
   id: string;
   name: string;
-  tokenSymbol: string; // Added to identify which token this market uses
-  oracleName: string; // Name of the oracle used
+  assets: [string, string]; // The two assets in the market pair
+  tokenSymbol: string;
+  oracleName: string;
+  oracles: { symbol: string; oracle: string }[];
   TokenIcon: React.ComponentType<{ className?: string }>;
   OracleIcon: React.ComponentType<{ className?: string }>;
   tvl: string;
@@ -20,18 +71,39 @@ interface Market {
   totalDepositsExact: string;
   availableLiquidity: string;
   availableLiquidityExact: string;
-  supplyAPY: string;
-  borrowAPY: string;
+  supplyAPY: string; // Best/headline rate shown in table
+  borrowAPY: string; // Best/headline rate shown in table
   maxLeverage: string;
   healthPercentage: number;
+  // Breakdown data
+  collateralAssets: MarketAsset[];
+  borrowAssets: MarketAsset[];
+  totalCollateral: string;
+  totalBorrowed: string;
+  utilization: number;
+  depositBreakdown: AssetBreakdown[];
+  liquidityBreakdown: LiquidityAsset[];
+  // NEW: APY for each asset in the market
+  depositAPYs: AssetAPY[];
+  borrowDirections: BorrowDirection[];
+  depositTrend?: {
+    value: string;
+    percentage: string;
+    isPositive: boolean;
+  };
 }
 
 const mockMarkets: Market[] = [
   {
     id: '1',
-    name: 'Market A',
+    name: 'USDC/wETH',
+    assets: ['USDC', 'wETH'],
     tokenSymbol: 'USDC',
     oracleName: 'Chainlink',
+    oracles: [
+      { symbol: 'USDC', oracle: 'Chainlink' },
+      { symbol: 'wETH', oracle: 'Chainlink' },
+    ],
     TokenIcon: USDCIcon,
     OracleIcon: Oracle1Icon,
     tvl: '$2.44B',
@@ -43,12 +115,45 @@ const mockMarkets: Market[] = [
     borrowAPY: '4.6%',
     maxLeverage: '20x',
     healthPercentage: 95,
+    collateralAssets: [
+      { symbol: 'USDC', name: 'USD Coin', type: 'collateral', value: '$1.2B' },
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'collateral', value: '$620M' },
+    ],
+    borrowAssets: [
+      { symbol: 'USDC', name: 'USD Coin', type: 'borrow', value: '$308M' },
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'borrow', value: '$272M' },
+    ],
+    totalCollateral: '$1.82B',
+    totalBorrowed: '$580M',
+    utilization: 32,
+    depositBreakdown: [
+      { symbol: 'USDC', amount: '1.2B USDC', value: '$1.2B', percentage: 66 },
+      { symbol: 'wETH', amount: '186K wETH', value: '$620M', percentage: 34 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'USDC', available: '$892M', total: '$1.2B', utilizationRate: 26 },
+      { symbol: 'wETH', available: '$348M', total: '$620M', utilizationRate: 44 },
+    ],
+    depositAPYs: [
+      { symbol: 'USDC', baseAPY: '6.5%', rewardAPY: '4.4%', rewardToken: 'aprMON', totalAPY: '10.9%' },
+      { symbol: 'wETH', baseAPY: '4.2%', rewardAPY: '3.1%', rewardToken: 'aprMON', totalAPY: '7.3%' },
+    ],
+    borrowDirections: [
+      { collateral: 'USDC', borrow: 'wETH', borrowAPY: '4.6%', baseAPY: '5.8%', rewardAPY: '1.2%', rewardToken: 'aprMON' },
+      { collateral: 'wETH', borrow: 'USDC', borrowAPY: '3.2%', baseAPY: '4.0%', rewardAPY: '0.8%', rewardToken: 'aprMON' },
+    ],
+    depositTrend: { value: '$12.4M', percentage: '+2.3%', isPositive: true },
   },
   {
     id: '2',
-    name: 'Market B',
+    name: 'wETH/USDC',
+    assets: ['wETH', 'USDC'],
     tokenSymbol: 'wETH',
     oracleName: 'Pyth',
+    oracles: [
+      { symbol: 'wETH', oracle: 'Pyth' },
+      { symbol: 'USDC', oracle: 'Chainlink' },
+    ],
     TokenIcon: WETHIcon,
     OracleIcon: Oracle2Icon,
     tvl: '$2.44B',
@@ -60,12 +165,45 @@ const mockMarkets: Market[] = [
     borrowAPY: '4.6%',
     maxLeverage: '12x',
     healthPercentage: 88,
+    collateralAssets: [
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'collateral', value: '$1.1B' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'collateral', value: '$550M' },
+    ],
+    borrowAssets: [
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'borrow', value: '$412M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'borrow', value: '$346M' },
+    ],
+    totalCollateral: '$1.65B',
+    totalBorrowed: '$758M',
+    utilization: 46,
+    depositBreakdown: [
+      { symbol: 'wETH', amount: '330K wETH', value: '$1.1B', percentage: 67 },
+      { symbol: 'USDC', amount: '550M USDC', value: '$550M', percentage: 33 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'wETH', available: '$612M', total: '$1.1B', utilizationRate: 44 },
+      { symbol: 'USDC', available: '$280M', total: '$550M', utilizationRate: 49 },
+    ],
+    depositAPYs: [
+      { symbol: 'wETH', baseAPY: '7.2%', rewardAPY: '3.7%', rewardToken: 'aprMON', totalAPY: '10.9%' },
+      { symbol: 'USDC', baseAPY: '5.1%', rewardAPY: '2.8%', rewardToken: 'aprMON', totalAPY: '7.9%' },
+    ],
+    borrowDirections: [
+      { collateral: 'wETH', borrow: 'USDC', borrowAPY: '4.6%', baseAPY: '5.6%', rewardAPY: '1.0%', rewardToken: 'aprMON' },
+      { collateral: 'USDC', borrow: 'wETH', borrowAPY: '5.8%', baseAPY: '6.8%', rewardAPY: '1.0%', rewardToken: 'aprMON' },
+    ],
+    depositTrend: { value: '$8.2M', percentage: '+1.8%', isPositive: true },
   },
   {
     id: '3',
-    name: 'Market C',
+    name: 'wBTC/USDC',
+    assets: ['wBTC', 'USDC'],
     tokenSymbol: 'wBTC',
     oracleName: 'Redstone',
+    oracles: [
+      { symbol: 'wBTC', oracle: 'Redstone' },
+      { symbol: 'USDC', oracle: 'Redstone' },
+    ],
     TokenIcon: WBTCIcon,
     OracleIcon: Oracle3Icon,
     tvl: '$2.44B',
@@ -77,12 +215,45 @@ const mockMarkets: Market[] = [
     borrowAPY: '4.6%',
     maxLeverage: '10x',
     healthPercentage: 92,
+    collateralAssets: [
+      { symbol: 'wBTC', name: 'Wrapped Bitcoin', type: 'collateral', value: '$980M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'collateral', value: '$460M' },
+    ],
+    borrowAssets: [
+      { symbol: 'wBTC', name: 'Wrapped Bitcoin', type: 'borrow', value: '$245M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'borrow', value: '$199M' },
+    ],
+    totalCollateral: '$1.44B',
+    totalBorrowed: '$444M',
+    utilization: 31,
+    depositBreakdown: [
+      { symbol: 'wBTC', amount: '9.8K wBTC', value: '$980M', percentage: 68 },
+      { symbol: 'USDC', amount: '460M USDC', value: '$460M', percentage: 32 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'wBTC', available: '$520M', total: '$980M', utilizationRate: 47 },
+      { symbol: 'USDC', available: '$236M', total: '$460M', utilizationRate: 49 },
+    ],
+    depositAPYs: [
+      { symbol: 'wBTC', baseAPY: '5.8%', rewardAPY: '5.1%', rewardToken: 'aprMON', totalAPY: '10.9%' },
+      { symbol: 'USDC', baseAPY: '4.8%', rewardAPY: '2.4%', rewardToken: 'aprMON', totalAPY: '7.2%' },
+    ],
+    borrowDirections: [
+      { collateral: 'wBTC', borrow: 'USDC', borrowAPY: '4.6%', baseAPY: '5.4%', rewardAPY: '0.8%', rewardToken: 'aprMON' },
+      { collateral: 'USDC', borrow: 'wBTC', borrowAPY: '6.2%', baseAPY: '7.4%', rewardAPY: '1.2%', rewardToken: 'aprMON' },
+    ],
+    depositTrend: { value: '$5.6M', percentage: '-0.8%', isPositive: false },
   },
   {
     id: '4',
-    name: 'Market D',
+    name: 'AUSD/wMON',
+    assets: ['AUSD', 'wMON'],
     tokenSymbol: 'AUSD',
     oracleName: 'Chainlink',
+    oracles: [
+      { symbol: 'AUSD', oracle: 'Chainlink' },
+      { symbol: 'wMON', oracle: 'Chainlink' },
+    ],
     TokenIcon: AUSDIcon,
     OracleIcon: Oracle1Icon,
     tvl: '$1.82B',
@@ -94,12 +265,45 @@ const mockMarkets: Market[] = [
     borrowAPY: '3.9%',
     maxLeverage: '18x',
     healthPercentage: 100,
+    collateralAssets: [
+      { symbol: 'AUSD', name: 'Agora USD', type: 'collateral', value: '$780M' },
+      { symbol: 'wMON', name: 'Wrapped Monad', type: 'collateral', value: '$340M' },
+    ],
+    borrowAssets: [
+      { symbol: 'AUSD', name: 'Agora USD', type: 'borrow', value: '$156M' },
+      { symbol: 'wMON', name: 'Wrapped Monad', type: 'borrow', value: '$112M' },
+    ],
+    totalCollateral: '$1.12B',
+    totalBorrowed: '$268M',
+    utilization: 24,
+    depositBreakdown: [
+      { symbol: 'AUSD', amount: '780M AUSD', value: '$780M', percentage: 70 },
+      { symbol: 'wMON', amount: '12M wMON', value: '$340M', percentage: 30 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'AUSD', available: '$512M', total: '$780M', utilizationRate: 34 },
+      { symbol: 'wMON', available: '$172M', total: '$340M', utilizationRate: 49 },
+    ],
+    depositAPYs: [
+      { symbol: 'AUSD', baseAPY: '4.2%', rewardAPY: '4.2%', rewardToken: 'AUSD', totalAPY: '8.4%' },
+      { symbol: 'wMON', baseAPY: '6.8%', rewardAPY: '4.5%', rewardToken: 'aprMON', totalAPY: '11.3%' },
+    ],
+    borrowDirections: [
+      { collateral: 'AUSD', borrow: 'wMON', borrowAPY: '5.2%', baseAPY: '6.2%', rewardAPY: '1.0%', rewardToken: 'aprMON' },
+      { collateral: 'wMON', borrow: 'AUSD', borrowAPY: '3.9%', baseAPY: '4.9%', rewardAPY: '1.0%', rewardToken: 'AUSD' },
+    ],
+    depositTrend: { value: '$18.9M', percentage: '+4.2%', isPositive: true },
   },
   {
     id: '5',
-    name: 'Market E',
+    name: 'wMON/USDC',
+    assets: ['wMON', 'USDC'],
     tokenSymbol: 'wMON',
     oracleName: 'Pyth',
+    oracles: [
+      { symbol: 'wMON', oracle: 'Pyth' },
+      { symbol: 'USDC', oracle: 'Chainlink' },
+    ],
     TokenIcon: WMONIcon,
     OracleIcon: Oracle2Icon,
     tvl: '$1.55B',
@@ -111,12 +315,45 @@ const mockMarkets: Market[] = [
     borrowAPY: '5.2%',
     maxLeverage: '8x',
     healthPercentage: 76,
+    collateralAssets: [
+      { symbol: 'wMON', name: 'Wrapped Monad', type: 'collateral', value: '$620M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'collateral', value: '$272M' },
+    ],
+    borrowAssets: [
+      { symbol: 'wMON', name: 'Wrapped Monad', type: 'borrow', value: '$186M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'borrow', value: '$78M' },
+    ],
+    totalCollateral: '$892M',
+    totalBorrowed: '$264M',
+    utilization: 30,
+    depositBreakdown: [
+      { symbol: 'wMON', amount: '22M wMON', value: '$620M', percentage: 70 },
+      { symbol: 'USDC', amount: '272M USDC', value: '$272M', percentage: 30 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'wMON', available: '$380M', total: '$620M', utilizationRate: 39 },
+      { symbol: 'USDC', available: '$143M', total: '$272M', utilizationRate: 47 },
+    ],
+    depositAPYs: [
+      { symbol: 'wMON', baseAPY: '8.1%', rewardAPY: '4.2%', rewardToken: 'aprMON', totalAPY: '12.3%' },
+      { symbol: 'USDC', baseAPY: '5.4%', rewardAPY: '2.8%', rewardToken: 'aprMON', totalAPY: '8.2%' },
+    ],
+    borrowDirections: [
+      { collateral: 'wMON', borrow: 'USDC', borrowAPY: '5.2%', baseAPY: '6.4%', rewardAPY: '1.2%', rewardToken: 'aprMON' },
+      { collateral: 'USDC', borrow: 'wMON', borrowAPY: '7.8%', baseAPY: '9.0%', rewardAPY: '1.2%', rewardToken: 'aprMON' },
+    ],
+    depositTrend: { value: '$6.8M', percentage: '+3.1%', isPositive: true },
   },
   {
     id: '6',
-    name: 'Market F',
+    name: 'aprMON/USDC',
+    assets: ['aprMON', 'USDC'],
     tokenSymbol: 'aprMON',
     oracleName: 'Redstone',
+    oracles: [
+      { symbol: 'aprMON', oracle: 'Redstone' },
+      { symbol: 'USDC', oracle: 'Chainlink' },
+    ],
     TokenIcon: AprMONIcon,
     OracleIcon: Oracle3Icon,
     tvl: '$980M',
@@ -128,12 +365,44 @@ const mockMarkets: Market[] = [
     borrowAPY: '4.1%',
     maxLeverage: '6x',
     healthPercentage: 82,
+    collateralAssets: [
+      { symbol: 'aprMON', name: 'Apriori Monad', type: 'collateral', value: '$420M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'collateral', value: '$214M' },
+    ],
+    borrowAssets: [
+      { symbol: 'aprMON', name: 'Apriori Monad', type: 'borrow', value: '$134M' },
+      { symbol: 'USDC', name: 'USD Coin', type: 'borrow', value: '$86M' },
+    ],
+    totalCollateral: '$634M',
+    totalBorrowed: '$220M',
+    utilization: 35,
+    depositBreakdown: [
+      { symbol: 'aprMON', amount: '15M aprMON', value: '$420M', percentage: 66 },
+      { symbol: 'USDC', amount: '214M USDC', value: '$214M', percentage: 34 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'aprMON', available: '$285M', total: '$420M', utilizationRate: 32 },
+      { symbol: 'USDC', available: '$127M', total: '$214M', utilizationRate: 41 },
+    ],
+    depositAPYs: [
+      { symbol: 'aprMON', baseAPY: '5.5%', rewardAPY: '4.2%', rewardToken: 'aprMON', totalAPY: '9.7%' },
+      { symbol: 'USDC', baseAPY: '4.8%', rewardAPY: '2.6%', rewardToken: 'aprMON', totalAPY: '7.4%' },
+    ],
+    borrowDirections: [
+      { collateral: 'aprMON', borrow: 'USDC', borrowAPY: '4.1%', baseAPY: '5.0%', rewardAPY: '0.9%', rewardToken: 'aprMON' },
+      { collateral: 'USDC', borrow: 'aprMON', borrowAPY: '6.5%', baseAPY: '7.4%', rewardAPY: '0.9%', rewardToken: 'aprMON' },
+    ],
   },
   {
     id: '7',
-    name: 'Market G',
+    name: 'sAUSD/wETH',
+    assets: ['sAUSD', 'wETH'],
     tokenSymbol: 'sAUSD',
     oracleName: 'Chainlink',
+    oracles: [
+      { symbol: 'sAUSD', oracle: 'Chainlink' },
+      { symbol: 'wETH', oracle: 'Pyth' },
+    ],
     TokenIcon: SAUSDIcon,
     OracleIcon: Oracle1Icon,
     tvl: '$672M',
@@ -145,6 +414,34 @@ const mockMarkets: Market[] = [
     borrowAPY: '6.8%',
     maxLeverage: '15x',
     healthPercentage: 98,
+    collateralAssets: [
+      { symbol: 'sAUSD', name: 'Staked AUSD', type: 'collateral', value: '$312M' },
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'collateral', value: '$133M' },
+    ],
+    borrowAssets: [
+      { symbol: 'sAUSD', name: 'Staked AUSD', type: 'borrow', value: '$127M' },
+      { symbol: 'wETH', name: 'Wrapped Ether', type: 'borrow', value: '$91M' },
+    ],
+    totalCollateral: '$445M',
+    totalBorrowed: '$218M',
+    utilization: 49,
+    depositBreakdown: [
+      { symbol: 'sAUSD', amount: '312M sAUSD', value: '$312M', percentage: 70 },
+      { symbol: 'wETH', amount: '40K wETH', value: '$133M', percentage: 30 },
+    ],
+    liquidityBreakdown: [
+      { symbol: 'sAUSD', available: '$198M', total: '$312M', utilizationRate: 37 },
+      { symbol: 'wETH', available: '$80M', total: '$133M', utilizationRate: 40 },
+    ],
+    depositAPYs: [
+      { symbol: 'sAUSD', baseAPY: '9.8%', rewardAPY: '5.4%', rewardToken: 'sAUSD', totalAPY: '15.2%' },
+      { symbol: 'wETH', baseAPY: '5.2%', rewardAPY: '3.6%', rewardToken: 'sAUSD', totalAPY: '8.8%' },
+    ],
+    borrowDirections: [
+      { collateral: 'sAUSD', borrow: 'wETH', borrowAPY: '6.8%', baseAPY: '8.4%', rewardAPY: '1.6%', rewardToken: 'sAUSD' },
+      { collateral: 'wETH', borrow: 'sAUSD', borrowAPY: '4.2%', baseAPY: '5.8%', rewardAPY: '1.6%', rewardToken: 'sAUSD' },
+    ],
+    depositTrend: { value: '$22.1M', percentage: '+5.8%', isPositive: true },
   },
 ];
 
@@ -170,7 +467,6 @@ export function MarketList() {
   // Parse value for sorting
   const parseValue = (value: string | number): number => {
     if (typeof value === 'number') return value;
-    // Remove $, %, x and convert B/M to numbers
     const cleaned = value.replace(/[$%x]/g, '');
     if (cleaned.includes('B')) {
       return parseFloat(cleaned.replace('B', '')) * 1000000000;
@@ -183,10 +479,8 @@ export function MarketList() {
   // Handle column sort
   const handleSort = (column: typeof sortColumn) => {
     if (sortColumn === column) {
-      // Toggle direction
       setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
     } else {
-      // New column, default to descending
       setSortColumn(column);
       setSortDirection('desc');
     }
@@ -200,7 +494,6 @@ export function MarketList() {
       }
     };
 
-    // Add small delay to prevent immediate closure on open
     const timeoutId = setTimeout(() => {
       if (isDepositFilterOpen) {
         document.addEventListener('mousedown', handleClickOutside);
@@ -255,21 +548,18 @@ export function MarketList() {
     setSelectedDepositAssets([]);
   };
 
-  // Filter markets based on selected deposit assets AND wallet filter AND search term
+  // Filter markets
   const filteredMarkets = mockMarkets.filter(market => {
-    // First apply deposit asset filter
     let matchesDepositFilter = true;
     if (selectedDepositAssets.length > 0) {
       matchesDepositFilter = selectedDepositAssets.includes(market.tokenSymbol);
     }
 
-    // Then apply wallet filter
     let matchesWalletFilter = true;
     if (walletFilter) {
       matchesWalletFilter = userWalletTokens.includes(market.tokenSymbol);
     }
 
-    // Apply search filter
     let matchesSearchFilter = true;
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
@@ -279,7 +569,6 @@ export function MarketList() {
         market.oracleName.toLowerCase().includes(search);
     }
 
-    // Market must match all filters
     return matchesDepositFilter && matchesWalletFilter && matchesSearchFilter;
   });
 
@@ -291,15 +580,10 @@ export function MarketList() {
     return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
   });
 
-  console.log('Wallet filter active:', walletFilter);
-  console.log('Selected assets:', selectedDepositAssets);
-  console.log('Filtered markets:', filteredMarkets);
-
   return (
     <div className="max-w-[1400px] mx-auto px-3 md:px-10 md:pr-16 py-6 md:py-12">
       {/* Stats Row */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-12 gap-8">
-        {/* Total Deposits */}
         <div>
           <div className="text-white/40 text-sm mb-3">Total Deposits</div>
           <div className="flex items-baseline gap-3 mb-3">
@@ -312,7 +596,6 @@ export function MarketList() {
           </div>
         </div>
 
-        {/* Active Loans & Earnings */}
         <div className="flex items-center gap-12 md:gap-16">
           <div>
             <div className="text-white/40 text-sm mb-3">Active Loans</div>
@@ -363,7 +646,6 @@ export function MarketList() {
       {/* Filters Bar */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div className="flex items-center gap-6 overflow-x-auto">
-          {/* In Wallet Toggle */}
           <div className="flex items-center gap-3">
             <span className="text-white/40 text-sm whitespace-nowrap">In Wallet:</span>
             <button 
@@ -378,10 +660,8 @@ export function MarketList() {
             </button>
           </div>
 
-          {/* Deposit Filter - NEW COMPONENT */}
           <DepositFilter onSelectionChange={setSelectedDepositAssets} />
 
-          {/* Advanced Filter */}
           <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white/60 hover:text-white transition-all text-sm whitespace-nowrap">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -390,7 +670,6 @@ export function MarketList() {
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
           <input
@@ -426,9 +705,9 @@ export function MarketList() {
                     <span className="text-white/30">{mockMarkets.length}</span>
                   </div>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('totalDeposits')}
                   >
                     <span className="whitespace-nowrap">Total Deposits</span>
@@ -437,9 +716,9 @@ export function MarketList() {
                     )}
                   </button>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('availableLiquidity')}
                   >
                     <span className="whitespace-nowrap">Available Liq.</span>
@@ -448,20 +727,20 @@ export function MarketList() {
                     )}
                   </button>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('supplyAPY')}
                   >
-                    <span className="whitespace-nowrap">Supply APY</span>
+                    <span className="whitespace-nowrap">Deposit APY</span>
                     {sortColumn === 'supplyAPY' && (
                       sortDirection === 'desc' ? <ArrowUp className="w-3.5 h-3.5 flex-shrink-0" /> : <ArrowDown className="w-3.5 h-3.5 flex-shrink-0" />
                     )}
                   </button>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('borrowAPY')}
                   >
                     <span className="whitespace-nowrap">Borrow APY</span>
@@ -470,9 +749,9 @@ export function MarketList() {
                     )}
                   </button>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('maxLeverage')}
                   >
                     <span className="whitespace-nowrap">Max Lev.</span>
@@ -481,9 +760,9 @@ export function MarketList() {
                     )}
                   </button>
                 </th>
-                <th className="text-left px-3 py-4 text-white/40 font-normal text-sm">
+                <th className="text-center px-3 py-4 text-white/40 font-normal text-sm">
                   <button 
-                    className="flex items-center gap-1 hover:text-white transition-colors w-full"
+                    className="flex items-center justify-center gap-1 hover:text-white transition-colors w-full"
                     onClick={() => handleSort('healthPercentage')}
                   >
                     <span className="whitespace-nowrap">Your Health</span>
@@ -501,87 +780,129 @@ export function MarketList() {
                   className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.03] transition-all cursor-pointer group"
                   onClick={() => handleRowClick(market.id)}
                 >
+                  {/* Market Name with Hover */}
                   <td className="px-4 py-5">
-                    <div className="flex items-center gap-3">
-                      <market.TokenIcon className="w-10 h-10 rounded-full flex-shrink-0" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-white text-sm font-medium whitespace-nowrap">{market.name}</span>
-                          <Tooltip content={`The oracle used in this market is ${market.oracleName}.`}>
-                            <div className="inline-flex flex-shrink-0">
-                              <market.OracleIcon className="w-4 h-4" />
+                    <HoverCard
+                      content={
+                        <MarketAssetsHover
+                          marketName={market.name}
+                          collateralAssets={market.collateralAssets}
+                          borrowAssets={market.borrowAssets}
+                          oracleName={market.oracleName}
+                          totalCollateral={market.totalCollateral}
+                          totalBorrowed={market.totalBorrowed}
+                          utilization={market.utilization}
+                        />
+                      }
+                      align="left"
+                      width={220}
+                    >
+                      <div 
+                        className="flex items-center gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <market.TokenIcon className="w-10 h-10 rounded-full flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-white text-sm font-medium whitespace-nowrap">{market.name}</span>
+                            <div 
+                              className="inline-flex flex-shrink-0"
+                              onMouseEnter={(e) => e.stopPropagation()}
+                              onMouseLeave={(e) => e.stopPropagation()}
+                            >
+                              <HoverCard
+                                content={<OracleHover oracles={market.oracles} />}
+                                width={180}
+                              >
+                                <div className="cursor-help">
+                                  <market.OracleIcon className="w-4 h-4" />
+                                </div>
+                              </HoverCard>
                             </div>
-                          </Tooltip>
+                          </div>
+                          <div className="text-white/40 text-xs whitespace-nowrap">{market.tvl}</div>
                         </div>
-                        <div className="text-white/40 text-xs whitespace-nowrap">{market.tvl}</div>
                       </div>
-                    </div>
+                    </HoverCard>
                   </td>
-                  <td className="px-3 py-5">
-                    <Tooltip content={market.totalDepositsExact}>
-                      <span className="text-white text-sm whitespace-nowrap cursor-help">
+
+                  {/* Total Deposits with Breakdown Hover */}
+                  <td className="px-3 py-5 text-center">
+                    <HoverCard
+                      content={
+                        <DepositsBreakdownHover
+                          totalDeposits={market.totalDeposits}
+                          totalDepositsExact={market.totalDepositsExact}
+                          assets={market.depositBreakdown}
+                          trend={market.depositTrend}
+                        />
+                      }
+                      width={240}
+                    >
+                      <span 
+                        className="text-white text-sm whitespace-nowrap cursor-help hover:text-white/80 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {market.totalDeposits}
                       </span>
-                    </Tooltip>
+                    </HoverCard>
                   </td>
-                  <td className="px-3 py-5">
-                    <Tooltip content={market.availableLiquidityExact}>
-                      <span className="text-white text-sm whitespace-nowrap cursor-help">
+
+                  {/* Available Liquidity with Breakdown Hover */}
+                  <td className="px-3 py-5 text-center">
+                    <HoverCard
+                      content={
+                        <LiquidityBreakdownHover
+                          totalLiquidity={market.availableLiquidity}
+                          totalLiquidityExact={market.availableLiquidityExact}
+                          assets={market.liquidityBreakdown}
+                        />
+                      }
+                      width={240}
+                    >
+                      <span 
+                        className="text-white text-sm whitespace-nowrap cursor-help hover:text-white/80 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {market.availableLiquidity}
                       </span>
-                    </Tooltip>
+                    </HoverCard>
                   </td>
-                  <td className="px-3 py-5">
-                    <Tooltip content={
-                      <div className="space-y-1">
-                        <div className="flex justify-between gap-4">
-                          <span className="text-white/60">Base APY:</span>
-                          <span className="text-white">6.5%</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-white/60">CVE Rewards:</span>
-                          <span className="text-green-400">3.2%</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-white/60">Bytes Boost:</span>
-                          <span className="text-purple-400">1.2%</span>
-                        </div>
-                        <div className="border-t border-white/10 pt-1 mt-1 flex justify-between gap-4">
-                          <span className="text-white font-medium">Total APY:</span>
-                          <span className="text-green-400 font-medium">{market.supplyAPY}</span>
-                        </div>
-                      </div>
-                    }>
-                      <span className="text-green-400 text-sm font-medium whitespace-nowrap cursor-help">
+
+                  {/* Supply APY - Shows APY for both assets */}
+                  <td className="px-3 py-5 text-center">
+                    <HoverCard
+                      content={<DepositAPYHover assets={market.depositAPYs} />}
+                      width={240}
+                    >
+                      <span 
+                        className="text-emerald-400 text-sm font-medium whitespace-nowrap cursor-help hover:text-emerald-300 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {market.supplyAPY}
                       </span>
-                    </Tooltip>
+                    </HoverCard>
                   </td>
-                  <td className="px-3 py-5">
-                    <Tooltip content={
-                      <div className="space-y-1">
-                        <div className="flex justify-between gap-4">
-                          <span className="text-white/60">Base APY:</span>
-                          <span className="text-white">3.2%</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-white/60">CVE Rewards:</span>
-                          <span className="text-green-400">1.4%</span>
-                        </div>
-                        <div className="border-t border-white/10 pt-1 mt-1 flex justify-between gap-4">
-                          <span className="text-white font-medium">Total APY:</span>
-                          <span className="text-orange-400 font-medium">{market.borrowAPY}</span>
-                        </div>
-                      </div>
-                    }>
-                      <span className="text-orange-400 text-sm font-medium whitespace-nowrap cursor-help">
+
+                  {/* Borrow APY - Shows both directions */}
+                  <td className="px-3 py-5 text-center">
+                    <HoverCard
+                      content={<BorrowAPYHover directions={market.borrowDirections} />}
+                      width={260}
+                    >
+                      <span 
+                        className="text-orange-400 text-sm font-medium whitespace-nowrap cursor-help hover:text-orange-300 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {market.borrowAPY}
                       </span>
-                    </Tooltip>
+                    </HoverCard>
                   </td>
-                  <td className="px-3 py-5 text-white text-sm whitespace-nowrap">{market.maxLeverage}</td>
+
+                  <td className="px-3 py-5 text-center text-white text-sm whitespace-nowrap">{market.maxLeverage}</td>
+                  
                   <td className="px-3 py-5">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center gap-2.5">
                       <HealthBarsIcon className="w-[51px] h-4 flex-shrink-0" healthPercentage={market.healthPercentage} />
                       <span className="text-white text-sm whitespace-nowrap">{market.healthPercentage}%</span>
                     </div>

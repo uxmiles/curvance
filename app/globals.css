@@ -4,6 +4,58 @@
 
 :root {
   --font-size: 16px;
+  
+  /* ═══════════════════════════════════════════════════════
+     FINTECH TYPOGRAPHY SYSTEM (Coinbase/Kraken style)
+     ═══════════════════════════════════════════════════════ */
+  
+  /* Spacing Scale (8pt grid) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+  --space-5xl: 64px;
+  
+  /* Component Sizing */
+  --input-height: 48px;
+  --input-height-compact: 40px;
+  --button-height: 48px;
+  --button-height-sm: 40px;
+  --touch-target: 44px;
+  --list-item-height: 56px;
+  
+  /* Typography Scale (Desktop) */
+  --text-display-xl: 48px;
+  --text-display-lg: 36px;
+  --text-display-md: 28px;
+  --text-heading-xl: 28px;
+  --text-heading-lg: 24px;
+  --text-heading-md: 20px;
+  --text-heading-sm: 18px;
+  --text-body-lg: 16px;
+  --text-body-md: 14px;
+  --text-body-sm: 13px;
+  --text-label-lg: 14px;
+  --text-label-md: 13px;
+  --text-label-sm: 12px;
+  --text-caption: 11px;
+  
+  /* Font Weights */
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.5;
+  
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -316,4 +368,155 @@ input[type="range"].leverage-slider::-moz-range-thumb:hover {
   .scale-hover:hover {
     transform: scale(1.02);
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   FINTECH TYPOGRAPHY UTILITIES
+   ═══════════════════════════════════════════════════════ */
+
+/* Display sizes (hero numbers - portfolio balances, APYs) */
+.text-display-xl {
+  font-size: var(--text-display-xl);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-none);
+  letter-spacing: -0.02em;
+}
+.text-display-lg {
+  font-size: var(--text-display-lg);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+}
+.text-display-md {
+  font-size: var(--text-display-md);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+/* Headings */
+.text-heading-xl {
+  font-size: var(--text-heading-xl);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: -0.01em;
+}
+.text-heading-lg {
+  font-size: var(--text-heading-lg);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-snug);
+}
+.text-heading-md {
+  font-size: var(--text-heading-md);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-snug);
+}
+.text-heading-sm {
+  font-size: var(--text-heading-sm);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-snug);
+}
+
+/* Body text */
+.text-body-lg {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+}
+.text-body-md {
+  font-size: var(--text-body-md);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+}
+.text-body-sm {
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+}
+
+/* Labels (NOT uppercase - Coinbase/Kraken style) */
+.text-label-lg {
+  font-size: var(--text-label-lg);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-snug);
+}
+.text-label-md {
+  font-size: var(--text-label-md);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-snug);
+}
+.text-label-sm {
+  font-size: var(--text-label-sm);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-snug);
+}
+
+/* Caption */
+.text-caption {
+  font-size: var(--text-caption);
+  font-weight: var(--font-regular);
+  line-height: var(--leading-snug);
+}
+
+/* Tabular numbers for financial data (APYs, balances, prices) */
+.tabular-nums {
+  font-feature-settings: 'tnum' on, 'lnum' on;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FINTECH COMPONENT UTILITIES  
+   ═══════════════════════════════════════════════════════ */
+
+/* Standard input (48px height) */
+.input-standard {
+  height: var(--input-height);
+  padding: var(--space-md) var(--space-base);
+  font-size: var(--text-body-lg);
+  border-radius: 0.75rem;
+}
+
+/* Compact input (40px height) */
+.input-compact {
+  height: var(--input-height-compact);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-body-md);
+  border-radius: 0.625rem;
+}
+
+/* Touch-friendly button */
+.btn-touch {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+}
+
+/* List item row */
+.list-item {
+  min-height: var(--list-item-height);
+  padding: var(--space-base) var(--space-lg);
+}
+
+/* Card padding */
+.card-padding {
+  padding: var(--space-lg);
+}
+@media (min-width: 768px) {
+  .card-padding {
+    padding: var(--space-xl);
+  }
+}
+
+/* Section gap */
+.section-gap {
+  gap: var(--space-2xl);
+}
+@media (min-width: 768px) {
+  .section-gap {
+    gap: var(--space-4xl);
+  }
+}
+
+/* Form gap */
+.form-gap {
+  gap: var(--space-base);
 }

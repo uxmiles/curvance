@@ -98,7 +98,7 @@ export function LeveragePanel({
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center justify-between w-full py-2 px-2 -mx-2 hover:bg-white/[0.02] rounded-lg transition-colors"
         >
-          <span className="text-white/50 text-xs uppercase tracking-wide">Position Details</span>
+          <span className="text-white/50 text-xs tracking-wide">Position Details</span>
           {isExpanded ? (
             <ChevronUp className="w-4 h-4 text-white/40" />
           ) : (
